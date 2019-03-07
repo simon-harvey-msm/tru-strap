@@ -91,6 +91,10 @@ parse_args() {
         set_facter init_repodir "${2}"
         shift
         ;;
+      --repourl|-s)
+        set_facter init_repourl "${2}"
+        shift
+        ;;
       --eyamlpubkeyfile|-j)
         set_facter init_eyamlpubkeyfile "${2}"
         shift
@@ -147,6 +151,7 @@ parse_args() {
   # Set some defaults if they aren't given on the command line.
   [[ -z "${FACTER_init_repobranch}" ]] && set_facter init_repobranch master
   [[ -z "${FACTER_init_repodir}" ]] && set_facter init_repodir /opt/"${FACTER_init_reponame}"
+  [[ -z "${FACTER_init_repourl}" ]] && set_facter init_repourl "git@github.com:"
 }
 
 # For the role skydns, prepend the nameserver to the list returned by DHCP
@@ -374,7 +379,7 @@ inject_ssh_key() {
 inject_repo_token() {
   echo "Injecting github access token"
   if [[ ! -z ${FACTER_init_repotoken} ]]; then
-    echo "https://${FACTER_init_repouser}:${FACTER_init_repotoken}@bitbucket1-eu1.moneysupermarketgroup.com" >> /root/.git-credentials || log_error "Failed to add access token"
+    echo "https://${FACTER_init_repouser}:${FACTER_init_repotoken}@${FACTER_init_repourl}" >> /root/.git-credentials || log_error "Failed to add access token"
     chmod 600 /root/.git-credentials || log_error "Failed to set permissions on /root/.git-credentials"
     git config --global credential.helper store || log_error "Failed to set git config"
   fi
@@ -383,12 +388,12 @@ inject_repo_token() {
 # Clone the git repo
 clone_git_repo() {
   # Clone private repo.
-  echo "Cloning for user ${FACTER_init_repouser} in https://bitbucket1-eu1.moneysupermarketgroup.com/scm/TRAVL/${FACTER_init_reponame} repo"
+  echo "Cloning for user ${FACTER_init_repouser} in https://${FACTER_init_repourl}${FACTER_init_reponame} repo"
   rm -rf "${FACTER_init_repodir}"
   # Exit if the clone fails
-  if ! git clone --depth=1 -b "${FACTER_init_repobranch}" https://bitbucket1-eu1.moneysupermarketgroup.com/scm/TRAVL/"${FACTER_init_reponame}".git "${FACTER_init_repodir}";
+  if ! git clone --depth=1 -b "${FACTER_init_repobranch}" https://"${FACTER_init_repourl}${FACTER_init_reponame}".git "${FACTER_init_repodir}";
   then
-    log_error "Failed to clone https://bitbucket1-eu1.moneysupermarketgroup.com/scm/TRAVL/${FACTER_init_reponame}.git"
+    log_error "Failed to clone https://${FACTER_init_repourl}${FACTER_init_reponame}.git"
   fi
 }
 

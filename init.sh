@@ -321,7 +321,7 @@ set_gemsources() {
 # Install the yum dependencies
 install_yum_deps() {
   echo "Installing required yum packages"
-  yum_install augeas-devel ncurses-devel gcc gcc-c++ curl git redhat-lsb-core
+  yum_install redhat-lsb-core
 }
 
 # Install the gem dependencies

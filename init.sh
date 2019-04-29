@@ -18,6 +18,7 @@ main() {
     symlink_puppet_dir
     inject_eyaml_keys
     fetch_puppet_modules
+    set_aws_region
     run_puppet
     secure_puppet_folder
 }
@@ -554,6 +555,11 @@ configure_global_gemrc() {
   else
     echo "  Warning: /root/.gemrc did not exist!"
   fi
+}
+
+# Set AWS_REGION prior to puppet run
+set_aws_region() {
+  export AWS_REGION=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/[a-z]$//'`
 }
 
 # Execute the Puppet run

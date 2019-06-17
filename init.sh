@@ -562,7 +562,7 @@ run_puppet() {
   echo ""
   echo "Running puppet apply"
   export FACTERLIB="${FACTERLIB}:$(ipaddress_primary_path)"
-  puppet apply ${PUPPET_APPLY_OPTS} /etc/puppet/manifests/site.pp --detailed-exitcodes
+  puppet apply ${PUPPET_APPLY_OPTS} /etc/puppet/manifests/site.pp --debug --detailed-exitcodes
 
   PUPPET_EXIT=$?
 

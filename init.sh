@@ -471,7 +471,7 @@ inject_eyaml_keys() {
 
 run_librarian() {
   echo -n "Running librarian-puppet"
-  gem_install activesupport:4.2.6 librarian-puppet:3.0.0
+  gem_install activesupport:4.2.6 #librarian-puppet:3.0.0
   local RESULT=''
   RESULT=$(librarian-puppet install --verbose)
   if [[ $? != 0 ]]; then

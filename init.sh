@@ -330,7 +330,7 @@ install_gem_deps() {
   echo "Installing puppet and related gems"
   gem_install unversioned_gem_manifest:1.0.0
   # Default in /tmp may be unreadable for systems that overmount /tmp (AEM)
-  export RUBYGEMS_UNVERSIONED_MANIFEST=/var/log/unversioned_gems.yaml  
+  export RUBYGEMS_UNVERSIONED_MANIFEST=/var/log/unversioned_gems.yaml
   gem_install puppet:3.8.7 'hiera:~>3.4' facter 'ruby-augeas:~>0.5' 'hiera-eyaml:~>2.1' 'ruby-shadow:~>2.5' facter_ipaddress_primary:1.1.0
   # Configure facter_ipaddress_primary so it works outside this script.
   # i.e Users logging in interactively can run puppet apply successfully
@@ -472,13 +472,17 @@ inject_eyaml_keys() {
 
 run_librarian() {
   echo -n "Running librarian-puppet"
-  gem_install activesupport:4.2.6 librarian-puppet:3.0.0
-  local RESULT=''
-  RESULT=$(librarian-puppet install --verbose)
-  if [[ $? != 0 ]]; then
-    log_error "librarian-puppet failed.\nThe full output was:\n${RESULT}"
-  fi
+  #gem_install activesupport:4.2.6 librarian-puppet:3.0.0
+  gem install activesupport:4.2.6 librarian-puppet:3.0.0 --no-ri --no-rdoc && /
+  librarian-puppet install --verbose && /
   librarian-puppet show
+  #local RESULT=$(librarian-puppet install --verbose)
+
+  #if [[ $? != 0 ]]; then
+  #  log_error "librarian-puppet failed.\nThe full output was:\n${RESULT}"
+  #fi
+  #librarian-puppet show
+  echo -n "Finished Running librarian-puppet"
 }
 
 # Fetch the Puppet modules via the moduleshttpcache or librarian-puppet

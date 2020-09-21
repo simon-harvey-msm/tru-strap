@@ -3,15 +3,7 @@
 
 main() {
     parse_args "$@"
-    prepend_nameserver_for_skydns
-    setup_rhel7_repo
-    upgrade_nss
-    install_yum_deps
-    install_ruby
     set_gemsources "$@"
-    configure_global_gemrc
-    install_gem_deps
-    patch_puppet
     inject_ssh_key
     inject_repo_token
     clone_git_repo
@@ -124,7 +116,7 @@ parse_args() {
         shift
         ;;
       --ruby-required-version)
-        RUBY_REQUIRED_VERSION="${2}"
+        echo "--ruby-required-version is now deprecated in tru-strap. Update msm-packer-templates" >&2
         shift
         ;;
       --debug)
@@ -155,64 +147,6 @@ parse_args() {
   [[ -z "${FACTER_init_repourl}" ]] && set_facter init_repourl "git@github.com:"
 }
 
-# For the role skydns, prepend the nameserver to the list returned by DHCP
-prepend_nameserver_for_skydns() {
-  if [[ $FACTER_init_role == "skydns" ]]; then
-    echo "Prepending dhclient domain-name-server..."
-    MAC_ADDR=$(cat /sys/class/net/eth0/address)
-    VPC_CIDR=$(curl --silent 169.254.169.254/latest/meta-data/network/interfaces/macs/${MAC_ADDR}/vpc-ipv4-cidr-block)
-    VPC_IP=$(echo $VPC_CIDR | cut -d'/' -f1)
-    AWS_DNS_IP=$(echo $VPC_IP | sed -e "s/\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\)\..\+/\1.\2.\3.2/gi")
-    DHCLIENT_OPTION="prepend domain-name-servers $AWS_DNS_IP;"
-    echo "    $DHCLIENT_OPTION"
-    grep "$DHCLIENT_OPTION" /etc/dhcp/dhclient.conf 1>/dev/null || echo $DHCLIENT_OPTION >> /etc/dhcp/dhclient.conf
-    dhclient -r && dhclient || echo "Could not renew DHCP lease. Continuing..."
-  fi
-}
-
-# Install yum packages if they're not already installed
-yum_install() {
-  for i in "$@"
-  do
-    if ! rpm -q ${i} > /dev/null 2>&1; then
-      local RESULT=''
-      RESULT=$(yum install -y ${i} 2>&1)
-      if [[ $? != 0 ]]; then
-        log_error "Failed to install yum package: ${i}\nyum returned:\n${RESULT}"
-      else
-        echo "Installed yum package: ${i}"
-      fi
-    fi
-  done
-}
-
-# Install Ruby gems if they're not already installed
-gem_install() {
-  local RESULT=''
-  for i in "$@"
-  do
-    if [[ ${i} =~ ^.*:.*$ ]];then
-      MODULE=$(echo ${i} | cut -d ':' -f 1)
-      VERSION=$(echo ${i} | cut -d ':' -f 2)
-      if ! gem list -i --local ${MODULE} --version ${VERSION} > /dev/null 2>&1; then
-        echo "Installing ${i}"
-        RESULT=$(gem install ${i} --no-ri --no-rdoc)
-        if [[ $? != 0 ]]; then
-          log_error "Failed to install gem: ${i}\ngem returned:\n${RESULT}"
-        fi
-      fi
-    else
-      if ! gem list -i --local ${i} > /dev/null 2>&1; then
-        echo "Installing ${i}"
-        RESULT=$(gem install ${i} --no-ri --no-rdoc)
-        if [[ $? != 0 ]]; then
-          log_error "Failed to install gem: ${i}\ngem returned:\n${RESULT}"
-        fi
-      fi
-    fi
-  done
-}
-
 print_version() {
   echo "${1}" "${2}"
 }
@@ -234,42 +168,8 @@ set_facter() {
   cat /etc/facter/facts.d/"${key}".txt || log_error "Failed to create ${key}.txt"
 }
 
-setup_rhel7_repo() {
-  yum_install redhat-lsb-core
-  dist=$(lsb_release -is)
-  majorversion=$(lsb_release -rs | cut -f1 -d.)
-  if [[ "$majorversion" == "7" ]] && [[ "$dist" == "RedHatEnterpriseServer" ]]; then
-    echo "RedHat Enterprise version 7- adding extra repo for *-devel"
-    yum_install yum-utils
-    yum-config-manager --enable rhui-REGION-rhel-server-optional || log_error "Failed to run yum-config-manager"
-  fi
-
-}
-
-upgrade_nss() {
-  yum_install redhat-lsb-core
-  majorversion=$(lsb_release -rs | cut -f1 -d.)
-  if [[ "$majorversion" == "6" ]]; then
-    echo "Version 6 - Upgrading NSS package TLS1.2 cloning from GitHub.com"
-    yum upgrade -y nss 2>&1 || log_error "Failed to upgrade nss package"
-  fi
-}
-
-install_ruby() {
-  if [[ -z "${RUBY_REQUIRED_VERSION}" ]]; then
-    RUBY_REQUIRED_VERSION=2.1.5:2.1.5-2
-  fi
-  ruby_v=$(echo ${RUBY_REQUIRED_VERSION} | cut -d: -f1)
-  ruby_p_v=$(echo ${RUBY_REQUIRED_VERSION} | cut -d: -f2)
-  majorversion=$(lsb_release -rs | cut -f1 -d.)
-  ruby -v  > /dev/null 2>&1
-  if [[ $? -ne 0 ]] || [[ $(ruby -e 'puts RUBY_VERSION') != $ruby_v ]]; then
-    yum remove -y ruby-* || log_error "Failed to remove old ruby"
-    yum_install https://s3-eu-west-1.amazonaws.com/msm-public-repo/ruby/ruby-${ruby_p_v}.el${majorversion}.x86_64.rpm
-  fi
-}
-
 # Set custom gem sources
+# Only for Rightform-CI now
 set_gemsources() {
   GEM_SOURCES=
   tmp_sources=false
@@ -317,49 +217,6 @@ set_gemsources() {
       log_error "All gem sources failed to add"
     fi
   fi
-}
-
-# Install the yum dependencies
-install_yum_deps() {
-  echo "Installing required yum packages"
-  yum_install augeas-devel ncurses-devel gcc gcc-c++ curl git redhat-lsb-core
-}
-
-# Install the gem dependencies
-install_gem_deps() {
-  echo "Installing puppet and related gems"
-  gem_install unversioned_gem_manifest:1.0.0
-  # Default in /tmp may be unreadable for systems that overmount /tmp (AEM)
-  export RUBYGEMS_UNVERSIONED_MANIFEST=/var/log/unversioned_gems.yaml  
-  gem_install puppet:3.8.7 'hiera:~>3.4' facter 'ruby-augeas:~>0.5' 'hiera-eyaml:~>2.1' 'ruby-shadow:~>2.5' facter_ipaddress_primary:1.1.0
-  # Configure facter_ipaddress_primary so it works outside this script.
-  # i.e Users logging in interactively can run puppet apply successfully
-  echo 'export FACTERLIB="${FACTERLIB}:$(ipaddress_primary_path)"'>/etc/profile.d/ipaddress_primary.sh
-  chmod 0755 /etc/profile.d/ipaddress_primary.sh
-}
-
-# Only happens for Rubies >= 2.2
-patch_puppet() {
-  /usr/bin/env ruby <<-EORUBY
-# If for some reason run with old Rubies
-class Array
-  include Comparable
-end
-exit if RUBY_VERSION.split('.').map(&:to_i) < [2, 2]
-require 'rubygems'
-# Locate main puppet library inside gems
-puppet = Gem.find_files('puppet.rb').find { |path| path.include?('3.8.7') }
-exit unless puppet
-vendor_path = File.expand_path('../puppet/vendor', puppet)
-require 'fileutils'
-Dir.chdir(vendor_path) do
-  exit unless File.exist?('load_safe_yaml.rb')
-  FileUtils.mv('load_safe_yaml.rb', '_load_safe_yaml.rb')
-  FileUtils.mv('require_vendored.rb', '_require_vendored.rb')
-  File.write('require_vendored.rb', 'module SafeYAML; OPTIONS = {}; end')
-end
-puts "Puppet installation patched for Ruby #{RUBY_VERSION} (by tru-strap)"
-EORUBY
 }
 
 # Inject the SSH key to allow git cloning
@@ -472,7 +329,6 @@ inject_eyaml_keys() {
 
 run_librarian() {
   echo -n "Running librarian-puppet"
-  gem_install activesupport:4.2.6 librarian-puppet:3.0.0
   local RESULT=''
   RESULT=$(librarian-puppet install --verbose)
   if [[ $? != 0 ]]; then
@@ -544,16 +400,6 @@ fetch_puppet_modules() {
   else
     echo "Nope!"
     run_librarian
-  fi
-}
-
-# Move root's .gemrc to global location (/etc/gemrc) to standardise all gem environment sources
-configure_global_gemrc() {
-  if [ -f /root/.gemrc ]; then
-    echo "Moving root's .gemrc to global location (/etc/gemrc)"
-    mv /root/.gemrc /etc/gemrc
-  else
-    echo "  Warning: /root/.gemrc did not exist!"
   fi
 }
 

@@ -368,7 +368,7 @@ fetch_puppet_modules() {
   echo "Cached puppet module tar ball should be ${MODULE_ARCH}, checking if it exists"
   cd "${PUPPET_DIR}" || log_error "Failed to cd to ${PUPPET_DIR}"
 
-  if [[ ! -z "${FACTER_init_moduleshttpcache}" && $(aws s3 ls ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} | wc -l) -ge 1 ]]; then
+  if [[ ! -z "${FACTER_init_moduleshttpcache}"]] && [[ $(aws s3 ls ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} | wc -l) -ge 1 ]]; then
     echo -n "Downloading pre-packed Puppet modules ${FACTER_init_moduleshttpcache}..."
     aws s3 cp ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} ${MODULE_ARCH}
 
@@ -386,7 +386,7 @@ fetch_puppet_modules() {
         run_librarian
     fi
 
-  elif [[ ! -z "${FACTER_init_moduleshttpcache}" && "200" == $(curl "${FACTER_init_moduleshttpcache}"/"${MODULE_ARCH}"  --head --silent | head -n 1 | cut -d ' ' -f 2) ]]; then
+  elif [[ ! -z "${FACTER_init_moduleshttpcache}" ]] && [[ "200" == $(curl "${FACTER_init_moduleshttpcache}"/"${MODULE_ARCH}"  --head --silent | head -n 1 | cut -d ' ' -f 2) ]]; then
     echo -n "Downloading pre-packed Puppet modules from cache..."
     if [[ ! -z $PASSWD ]]; then
       package=modules.tar

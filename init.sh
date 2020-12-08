@@ -368,16 +368,20 @@ fetch_puppet_modules() {
   echo "Cached puppet module tar ball should be ${MODULE_ARCH}, checking if it exists"
   cd "${PUPPET_DIR}" || log_error "Failed to cd to ${PUPPET_DIR}"
 
+  # check if the moduleshttpcache fact exists
   if [[ ! -z "${FACTER_init_moduleshttpcache}" ]]; then
   
+    # check if its an s3 address
     if [[ "${FACTER_init_moduleshttpcache}" =~ "s3-eu-west-1" ]]; then
 
+      # if its s3 address update url from https://s3 to s3://
       if [[ "${FACTER_init_moduleshttpcache}" =~ "modules-v2" ]]; then
         FACTER_init_moduleshttpcache='s3://msm-public-repo/puppet/modules-v2'
       else
         FACTER_init_moduleshttpcache='s3://puppet-caches'
       fi
 
+      # check if the mododule is in the bucket. If run for the first time it wont be.
       if [[ $(aws s3 ls ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} | wc -l) -ge 1 ]]; then
         echo -n "Downloading pre-packed Puppet modules ${FACTER_init_moduleshttpcache}..."
         aws s3 cp ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} ${MODULE_ARCH}

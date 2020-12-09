@@ -380,10 +380,10 @@ fetch_puppet_modules() {
       fi
 
       # check if the mododule is in the bucket. If run for the first time it wont be.
-      if [[ $(aws s3 ls ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} | wc -l) -ge 1 ]]; then
+      if [[ $(/bin/aws s3 ls ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} | wc -l) -ge 1 ]]; then
 
         echo -n "Downloading pre-packed Puppet modules ${FACTER_init_moduleshttpcache}..."
-        aws s3 cp ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} ${MODULE_ARCH}
+        /bin/aws s3 cp ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} ${MODULE_ARCH}
 
         tar tf ${MODULE_ARCH} &> /dev/null
         tar_test=$?

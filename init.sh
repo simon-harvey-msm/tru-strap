@@ -379,7 +379,7 @@ fetch_puppet_modules() {
         FACTER_init_moduleshttpcache="s3://$(echo $FACTER_init_moduleshttpcache | cut -d: -f2 | cut -d/ -f4-)"
       fi
 
-      # check if the mododule is in the bucket. If run for the first time it wont be.
+      # check if the module is in the bucket. If run for the first time it wont be.
       if [[ $(/bin/aws s3 ls ${FACTER_init_moduleshttpcache}/${MODULE_ARCH} | wc -l) -ge 1 ]]; then
 
         echo -n "Downloading pre-packed Puppet modules ${FACTER_init_moduleshttpcache}..."

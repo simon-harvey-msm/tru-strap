@@ -393,7 +393,7 @@ fetch_puppet_modules() {
         tar_test=$?
 
         if [[ $tar_test -eq 0 ]]; then
-          tar xpf ${MODULE_ARCH}
+          tar xpf $package 
           echo "=================="
           echo "Unpacking modules:"
           puppet module list
